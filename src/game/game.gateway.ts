@@ -1,14 +1,16 @@
-import { SubscribeMessage, WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
+import { OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
 import { Server, Socket} from "socket.io";
 import { CodeGeneratorService } from "./code-generator.service";
 import { GameService } from "./game.service";
+import { OnModuleInit } from "@nestjs/common";
 
 function getRoom(socket: Socket) {
+    console.log(socket.rooms)
     return Array.from(socket.rooms)[1];
 }
 
 @WebSocketGateway()
-export class GameGateway {
+export class GameGateway implements OnModuleInit{
     constructor(
         private readonly codeGeneratorService: CodeGeneratorService,
         private readonly gameService: GameService
@@ -17,10 +19,31 @@ export class GameGateway {
     }
 
     @WebSocketServer() server: Server;
+
+    onModuleInit() {
+        this.server.on('connection', (client: Socket) => {
+            client.on('disconnecting', () => this.handleDisconnecting(client));
+        });
+    }
+
+    handleDisconnecting(client: Socket) {
+        console.log(client.id)
+        const roomCode = getRoom(client);
+        console.log('roomCode ' + roomCode)
+        const nick = this.gameService.getNick(client.id);
+        if(this.gameService.isHost(roomCode, nick)){
+            this.gameService.destroyRoom(roomCode);
+            this.server.to(roomCode).emit('roomDestroyed');
+        }else{
+            this.gameService.removePlayer(roomCode, nick, client.id);
+            this.server.to(roomCode).emit('playersUpdate', {players: this.gameService.getPlayers(roomCode)});
+        }
+    }
     
     @SubscribeMessage('createRoom')
     createRoom(client: Socket, data: any) {
         const roomCode = this.codeGeneratorService.generateCode();
+        this.gameService.registerSocket(data.nick, client.id);
         client.join(roomCode);
         this.gameService.createRoom(roomCode);
         this.gameService.addPlayer(data.nick, roomCode);
@@ -32,10 +55,16 @@ export class GameGateway {
     @SubscribeMessage('joinRoom')
     joinRoom(client: Socket, data: any) {
         if(this.gameService.roomExists(data.roomCode)){
-            client.join(data.roomCode);
-            this.gameService.addPlayer(data.nick, data.roomCode);
-            this.server.to(data.roomCode).emit('playersUpdate', {players: this.gameService.getPlayers(data.roomCode)});
-            client.emit('joinRoom', {roomCode: data.roomCode});
+            if(this.gameService.isRoomFull(data.roomCode)){
+                client.emit('error', {error: 'room-full'});
+                return;
+            }else{
+                this.gameService.registerSocket(data.nick, client.id);
+                client.join(data.roomCode);
+                this.gameService.addPlayer(data.nick, data.roomCode);
+                this.server.to(data.roomCode).emit('playersUpdate', {players: this.gameService.getPlayers(data.roomCode)});
+                client.emit('joinRoom', {roomCode: data.roomCode});
+            }
         }
         else{
             client.emit('joinRoom', {roomCode: null});

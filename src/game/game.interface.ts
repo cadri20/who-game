@@ -21,6 +21,10 @@ export class Game{
         this.players.push(nick);
     }
 
+    removePlayer(nick: string){
+        this.players = this.players.filter(player => player !== nick);
+    }
+
     startGame(){
         this.currentQuestion = 0;
     }
