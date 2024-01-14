@@ -62,4 +62,8 @@ export class GameService{
         return this.rooms.get(roomId).mostVoted;
     }
 
+    roomExists(roomId: string): boolean{
+        return this.rooms.has(roomId);
+    }
+
 }

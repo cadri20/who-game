@@ -31,11 +31,15 @@ export class GameGateway {
 
     @SubscribeMessage('joinRoom')
     joinRoom(client: Socket, data: any) {
-        const roomCode = data.roomCode;
-        client.join(roomCode);
-        this.gameService.addPlayer(data.nick, roomCode);
-        this.server.to(roomCode).emit('playersUpdate', {players: this.gameService.getPlayers(roomCode)});
-        client.emit('joinRoom', {roomCode: roomCode});
+        if(this.gameService.roomExists(data.roomCode)){
+            client.join(data.roomCode);
+            this.gameService.addPlayer(data.nick, data.roomCode);
+            this.server.to(data.roomCode).emit('playersUpdate', {players: this.gameService.getPlayers(data.roomCode)});
+            client.emit('joinRoom', {roomCode: data.roomCode});
+        }
+        else{
+            client.emit('joinRoom', {roomCode: null});
+        }
     }
 
     @SubscribeMessage('startGame')

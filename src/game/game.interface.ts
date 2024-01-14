@@ -6,15 +6,15 @@ export class Game{
     currentQuestion: number;
     currentAnswers: Map<string, string>;
     currentVotes: Map<string, number>;
-    mostVoted: string[];
+    mostVotedPerRound: string[][];
 
     constructor(){
         this.players = [];
-        this.questions = ['quien es el mas guapo', 'quien es el mas feo', 'quien es el mas tonto', 'quien es el mas listo', 'quien es el mas alto', 'quien es el mas bajo', 'quien es el mas gordo', 'quien es el mas delgado', 'quien es el mas fuerte', 'quien es el mas debil', 'quien es el mas rapido', 'quien es el mas lento', 'quien es el mas rico', 'quien es el mas pobre', 'quien es el mas guapo', 'quien es el mas feo', 'quien es el mas tonto', 'quien es el mas listo', 'quien es el mas alto', 'quien es el mas bajo', 'quien es el mas gordo', 'quien es el mas delgado', 'quien es el mas fuerte', 'quien es el mas debil', 'quien es el mas rapido', 'quien es el mas lento', 'quien es el mas rico', 'quien es el mas pobre']
+        this.questions = ['quien es el mas guapo', 'quien es el mas feo']
         this.currentQuestion = 0;
         this.currentVotes = new Map<string, number>();
         this.currentAnswers = new Map<string, string>();
-        this.mostVoted = [];
+        this.mostVotedPerRound = [];
     }
 
     addPlayer(nick: string){
@@ -27,18 +27,15 @@ export class Game{
 
     resetVotes(){
         this.currentVotes = new Map<string, number>();
+        this.currentAnswers = new Map<string, string>();
         for(const player of this.players){
             this.currentVotes.set(player, 0);
         }
     }
 
     nextQuestion(): string{
+    
         this.resetVotes();
-        if(this.currentQuestion != 0){
-            this.currentAnswers = new Map<string, string>()
-            this.mostVoted.push(...this.currentMostVoted);
-            
-        }
         const question = this.questions[this.currentQuestion];
         this.currentQuestion++;
         return question;
@@ -62,7 +59,38 @@ export class Game{
                 mostVotedPlayers.push(player);
             }
         }
+
+        this.mostVotedPerRound.push(mostVotedPlayers);
         return mostVotedPlayers;
+    }
+
+    //get the most voted player in all the rounds
+    get mostVoted(): string[]{
+        //convert the mostVotedPerRound matrix into a map with the player as key and the number of times he was the most voted as value
+        const mostVotedMap = new Map<string, number>();
+        for(const mostVotedRound of this.mostVotedPerRound){
+            for(const player of mostVotedRound){
+                let votes = mostVotedMap.get(player);
+                if(!votes){
+                    mostVotedMap.set(player, 0);
+                    votes = 0;
+                }
+                mostVotedMap.set(player, votes + 1);
+            }
+        }
+
+        //get the most voted player
+        const mostVoted = Math.max(...mostVotedMap.values());
+        const mostVotedPlayers = [];
+        for(const [player, votes] of mostVotedMap.entries()){
+            if(votes === mostVoted){
+                mostVotedPlayers.push(player);
+            }
+        }
+
+        return mostVotedPlayers;
+            
+
     }
 
     get playersWithoutAnswer(): string[]{
