@@ -3,6 +3,7 @@ import { Server, Socket} from "socket.io";
 import { CodeGeneratorService } from "./code-generator.service";
 import { GameService } from "./game.service";
 import { OnModuleInit } from "@nestjs/common";
+import { QuestionService } from "src/questions/question.service";
 
 function getRoom(socket: Socket) {
     console.log(socket.rooms)
@@ -13,7 +14,8 @@ function getRoom(socket: Socket) {
 export class GameGateway implements OnModuleInit{
     constructor(
         private readonly codeGeneratorService: CodeGeneratorService,
-        private readonly gameService: GameService
+        private readonly gameService: GameService,
+        private readonly questionService: QuestionService
         ){
 
     }
@@ -41,15 +43,15 @@ export class GameGateway implements OnModuleInit{
     }
     
     @SubscribeMessage('createRoom')
-    createRoom(client: Socket, data: any) {
+    async createRoom(client: Socket, data: any) {
         const roomCode = this.codeGeneratorService.generateCode();
         this.gameService.registerSocket(data.nick, client.id);
         client.join(roomCode);
         this.gameService.createRoom(roomCode);
         this.gameService.addPlayer(data.nick, roomCode);
         this.gameService.setHost(roomCode, data.nick);
-
-        client.emit('createRoom', {roomCode: roomCode});
+        const categories = await this.questionService.getCategories();
+        client.emit('createRoom', {roomCode: roomCode, categories});
     }
 
     @SubscribeMessage('joinRoom')
@@ -72,11 +74,13 @@ export class GameGateway implements OnModuleInit{
     }
 
     @SubscribeMessage('startGame')
-    startGame(client: Socket, data: any) {
-        
+    async startGame(client: Socket, data: any) {
+        const category = data.category;
+        console.log('category ' + category)
         console.log(client.rooms)
         const roomCode = getRoom(client);
         console.log('roomCode ' + roomCode)
+        await this.gameService.setQuestionsCategory(roomCode, category);
         this.gameService.startGame(roomCode);
         const question = this.gameService.nextQuestion(roomCode);
         const options = this.gameService.getPlayers(roomCode);
@@ -87,7 +91,8 @@ export class GameGateway implements OnModuleInit{
     @SubscribeMessage('submitAnswer')
     submitAnswer(client: Socket, data: any) {
         const roomCode = getRoom(client);
-        this.gameService.submitAnswer(roomCode, data.nick, data.answer);
+        const nick = this.gameService.getNick(client.id);
+        this.gameService.submitAnswer(roomCode, nick, data.answer);
         if(this.gameService.allPlayersHasAnswered(roomCode)){
             const mostVoted = this.gameService.getCurrentMostVoted(roomCode);
             const votes = this.gameService.getVotes(roomCode);
@@ -101,7 +106,8 @@ export class GameGateway implements OnModuleInit{
     @SubscribeMessage('nextQuestion')
     nextQuestion(client: Socket, data: any) {
         const roomCode = getRoom(client);
-        if (this.gameService.isHost(roomCode, data.nick)) {
+        const nick = this.gameService.getNick(client.id);
+        if (this.gameService.isHost(roomCode, nick)) {
             if (this.gameService.thereAreMoreQuestions(roomCode)) {
                 const question = this.gameService.nextQuestion(roomCode);
                 const options = this.gameService.getPlayers(roomCode);

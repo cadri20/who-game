@@ -8,9 +8,9 @@ export class Game{
     currentVotes: Map<string, number>;
     mostVotedPerRound: string[][];
 
-    constructor(){
+    constructor(questions: string[] = []){
         this.players = [];
-        this.questions = ['quien es el mas guapo', 'quien es el mas feo']
+        this.questions = questions
         this.currentQuestion = 0;
         this.currentVotes = new Map<string, number>();
         this.currentAnswers = new Map<string, string>();
@@ -50,6 +50,8 @@ export class Game{
         const votes = this.currentVotes.get(answer);
         this.currentVotes.set(answer, votes + 1);
     }
+
+    
 
     get allPlayersHasAnswered(): boolean{
         return this.currentAnswers.size === this.players.length;
@@ -110,4 +112,9 @@ export class Game{
     get moreQuestions(): boolean{
         return this.currentQuestion != this.questions.length;
     }
+}
+
+export interface QuestionCategory{
+    key: string;
+    category: string;
 }

@@ -2,11 +2,15 @@ import { Injectable } from "@nestjs/common";
 import { get } from "http";
 import { Game } from "./game.interface";
 import { max } from "rxjs";
+import { QuestionService } from "src/questions/question.service";
 
 @Injectable()
 export class GameService{
     private readonly rooms = new Map<string, Game>();
     private sockets = new Map<string, string>();
+
+    constructor(private readonly questionService: QuestionService) {
+    }
     
     registerSocket(nick: string , socketId: string){
         this.sockets.set(socketId, nick);
@@ -25,10 +29,17 @@ export class GameService{
     }
 
     isHost(roomId: string, nick: string): boolean{
-        return this.rooms.get(roomId).host === nick;
+        const room = this.rooms.get(roomId);
+        if(room){
+            return room.host === nick;
+        }else{
+            return false;
+        }
+
     }
 
     addPlayer(nick: string, roomId: string){
+        console.log('add ' + nick + ' to ' + roomId)
         this.rooms.get(roomId).addPlayer(nick);
     }
 
@@ -87,6 +98,17 @@ export class GameService{
 
     destroyRoom(roomId: string){
         this.rooms.delete(roomId);
+    }
+
+    async setQuestionsCategory(roomId: string, category: string){
+        let questions: string[];
+        if(category == 'all'){
+            questions = await this.questionService.getAllQuestions();
+        }else{
+            questions = await this.questionService.getQuestions(category);
+        }
+        
+        this.rooms.get(roomId).questions = questions;
     }
 
 }
