@@ -25,6 +25,10 @@ export class GameGateway implements OnModuleInit{
     onModuleInit() {
         this.server.on('connection', (client: Socket) => {
             client.on('disconnecting', () => this.handleDisconnecting(client));
+            if(process.env.NODE_ENV != 'development'){
+                //ping every 2 seconds to keep the connection alive
+                setInterval(() => client.emit('ping'), 2000);
+            }
         });
     }
 
