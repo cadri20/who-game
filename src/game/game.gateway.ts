@@ -10,7 +10,7 @@ function getRoom(socket: Socket) {
     return Array.from(socket.rooms)[1];
 }
 
-@WebSocketGateway()
+@WebSocketGateway({cors: true})
 export class GameGateway implements OnModuleInit{
     constructor(
         private readonly codeGeneratorService: CodeGeneratorService,
@@ -32,6 +32,9 @@ export class GameGateway implements OnModuleInit{
         console.log(client.id)
         const roomCode = getRoom(client);
         console.log('roomCode ' + roomCode)
+        if(!roomCode){
+            return;
+        }
         const nick = this.gameService.getNick(client.id);
         if(this.gameService.isHost(roomCode, nick)){
             this.gameService.destroyRoom(roomCode);
