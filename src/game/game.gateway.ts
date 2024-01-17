@@ -66,11 +66,17 @@ export class GameGateway implements OnModuleInit{
                 client.emit('error', {error: 'room-full'});
                 return;
             }else{
-                this.gameService.registerSocket(data.nick, client.id);
-                client.join(data.roomCode);
-                this.gameService.addPlayer(data.nick, data.roomCode);
-                client.emit('joinRoom', {roomCode: data.roomCode});
-                this.server.to(data.roomCode).emit('playersUpdate', {players: this.gameService.getPlayers(data.roomCode)});
+                const nick = data.nick
+                if(this.gameService.isNickAvailable(data.roomCode, nick)){
+                    this.gameService.registerSocket(nick, client.id);
+                    client.join(data.roomCode);
+                    this.gameService.addPlayer(data.nick, data.roomCode);
+                    client.emit('joinRoom', {roomCode: data.roomCode});
+                    this.server.to(data.roomCode).emit('playersUpdate', {players: this.gameService.getPlayers(data.roomCode)});
+                }else{
+                    client.emit('error', {error: 'nick-taken'});
+                }
+                
             }
         }
         else{

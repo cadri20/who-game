@@ -124,5 +124,9 @@ export class GameService{
         this.rooms.get(roomId).questions = questions;
     }
 
+    isNickAvailable(roomId: string, nick: string): boolean{
+        return !this.rooms.get(roomId).players.includes(nick);
+    }
+
 
 }
