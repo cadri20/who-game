@@ -1,4 +1,5 @@
 
+
 export class Game{
     players: string[];
     host: string;
@@ -112,9 +113,22 @@ export class Game{
     get moreQuestions(): boolean{
         return this.currentQuestion != this.questions.length;
     }
+
+    restart(){
+        this.currentQuestion = 0;
+        this.currentAnswers = new Map<string, string>();
+        this.currentVotes = new Map<string, number>();
+        this.mostVotedPerRound = [];
+    }
 }
 
 export interface QuestionCategory{
     key: string;
     category: string;
+    iconUrl: string;
+}
+
+export interface Vote{
+    voter: string;
+    votedPlayer: string;
 }

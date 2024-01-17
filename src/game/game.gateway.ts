@@ -55,6 +55,7 @@ export class GameGateway implements OnModuleInit{
         this.gameService.setHost(roomCode, data.nick);
         const categories = await this.questionService.getCategories();
         client.emit('createRoom', {roomCode: roomCode, categories});
+        client.emit('playersUpdate', {players: this.gameService.getPlayers(roomCode)});
     }
 
     @SubscribeMessage('joinRoom')
@@ -67,8 +68,8 @@ export class GameGateway implements OnModuleInit{
                 this.gameService.registerSocket(data.nick, client.id);
                 client.join(data.roomCode);
                 this.gameService.addPlayer(data.nick, data.roomCode);
-                this.server.to(data.roomCode).emit('playersUpdate', {players: this.gameService.getPlayers(data.roomCode)});
                 client.emit('joinRoom', {roomCode: data.roomCode});
+                this.server.to(data.roomCode).emit('playersUpdate', {players: this.gameService.getPlayers(data.roomCode)});
             }
         }
         else{
@@ -96,13 +97,14 @@ export class GameGateway implements OnModuleInit{
         const roomCode = getRoom(client);
         const nick = this.gameService.getNick(client.id);
         this.gameService.submitAnswer(roomCode, nick, data.answer);
+    
+        const playersWithoutAnswer = this.gameService.getPlayersWithoutAnswer(roomCode);
+        client.emit('submitAnswer', {playersWithoutAnswer});
+        client.to(roomCode).emit('playersWithoutAnswer', {playersWithoutAnswer})
         if(this.gameService.allPlayersHasAnswered(roomCode)){
             const mostVoted = this.gameService.getCurrentMostVoted(roomCode);
             const votes = this.gameService.getVotes(roomCode);
             this.server.to(roomCode).emit('questionAnswered', {mostVoted, votes});
-        }else{
-            const playersWithoutAnswer = this.gameService.getPlayersWithoutAnswer(roomCode);
-            client.emit('submitAnswer', {playersWithoutAnswer});
         }
     }
 
@@ -121,6 +123,17 @@ export class GameGateway implements OnModuleInit{
             }
         }
         
+    }
+
+    @SubscribeMessage('playAgain')
+    playAgain(client: Socket, data: any) {
+        const roomCode = getRoom(client);
+        const nick = this.gameService.getNick(client.id);
+        if (this.gameService.isHost(roomCode, nick)) {
+            this.gameService.playAgain(roomCode);
+        }
+        this.server.to(roomCode).emit('playAgain');
+        this.server.to(roomCode).emit('playersUpdate', { players: this.gameService.getPlayers(roomCode) });
     }
 
 

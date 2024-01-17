@@ -51,7 +51,8 @@ export class FirestoreQuestionService implements QuestionService{
         const docs = await  getDocs(collection(this.firestore, "questions"))
         const categories: QuestionCategory[] = []
         docs.forEach(doc => {
-            categories.push({key: doc.id, category: doc.data().name})
+            const data = doc.data()
+            categories.push({key: doc.id, category: data.name, iconUrl: data.iconUrl})
         })
 
         return categories

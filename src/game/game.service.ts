@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { get } from "http";
-import { Game } from "./game.interface";
+import { Game, Vote } from "./game.interface";
 import { max } from "rxjs";
 import { QuestionService } from "src/questions/question.service";
 
@@ -44,16 +44,19 @@ export class GameService{
     }
 
     isRoomFull(roomId: string): boolean{
-        const maxPlayers = process.env.NODE_ENV === 'development' ? 2 : 8;
+        const maxPlayers = process.env.NODE_ENV === 'development' ? 8 : 8;
         return this.rooms.get(roomId).players.length === maxPlayers;
     }
 
     removePlayer(roomId: string, nick: string, socketId: string){
-        this.rooms.get(roomId).removePlayer(nick);
+        const room = this.rooms.get(roomId);    
+        if(room){
+            room.removePlayer(nick);
+        }
         this.sockets.delete(socketId);
     }
     getPlayers(roomId: string): string[]{
-        return this.rooms.get(roomId).players;
+        return this.rooms.get(roomId)?.players ?? [];
     }
 
     startGame(roomId: string){
@@ -76,8 +79,14 @@ export class GameService{
         return this.rooms.get(roomId).currentMostVoted;
     }
 
-    getVotes(roomId: string): any{
-        return Object.fromEntries(this.rooms.get(roomId).currentAnswers);
+    getVotes(roomId: string): Vote[]{
+        const answers = this.rooms.get(roomId).currentAnswers;
+        const votes: Vote[] = [];
+        for(const [nick, answer] of answers){
+            votes.push({voter: nick, votedPlayer: answer});
+        }
+
+        return votes;
     }
 
     getPlayersWithoutAnswer(roomId: string): string[]{
@@ -98,6 +107,10 @@ export class GameService{
 
     destroyRoom(roomId: string){
         this.rooms.delete(roomId);
+    }
+
+    playAgain(roomId: string){
+        this.rooms.get(roomId).restart();
     }
 
     async setQuestionsCategory(roomId: string, category: string){
