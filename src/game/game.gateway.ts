@@ -24,11 +24,11 @@ export class GameGateway implements OnModuleInit{
 
     onModuleInit() {
         this.server.on('connection', (client: Socket) => {
-            client.on('disconnecting', () => this.handleDisconnecting(client));
+            client.on('disconnecting', () => this.disconnect(client));
         });
     }
 
-    handleDisconnecting(client: Socket) {
+    disconnect(client: Socket) {
         console.log(client.id)
         const roomCode = getRoom(client);
         console.log('roomCode ' + roomCode)
@@ -38,7 +38,8 @@ export class GameGateway implements OnModuleInit{
         const nick = this.gameService.getNick(client.id);
         if(this.gameService.isHost(roomCode, nick)){
             this.gameService.destroyRoom(roomCode);
-            this.server.to(roomCode).emit('roomDestroyed');
+            client.to(roomCode).emit('roomDestroyed');
+            console.log('room '+ roomCode + ' destroyed' )
         }else{
             this.gameService.removePlayer(roomCode, nick, client.id);
             this.server.to(roomCode).emit('playersUpdate', {players: this.gameService.getPlayers(roomCode)});
@@ -134,6 +135,11 @@ export class GameGateway implements OnModuleInit{
         }
         this.server.to(roomCode).emit('playAgain');
         this.server.to(roomCode).emit('playersUpdate', { players: this.gameService.getPlayers(roomCode) });
+    }
+
+    @SubscribeMessage('leaveRoom')
+    leaveRoom(client: Socket, data: any){
+        this.disconnect(client);
     }
 
 
