@@ -4,6 +4,7 @@ export class Game{
     players: string[];
     host: string;
     questions: string[];
+    playersQuestions: string[]
     currentQuestion: number;
     currentAnswers: Map<string, string>;
     currentVotes: Map<string, number>;
@@ -12,6 +13,7 @@ export class Game{
     constructor(questions: string[] = []){
         this.players = [];
         this.questions = questions
+        this.playersQuestions = []
         this.currentQuestion = 0;
         this.currentVotes = new Map<string, number>();
         this.currentAnswers = new Map<string, string>();
@@ -28,6 +30,7 @@ export class Game{
 
     startGame(){
         this.currentQuestion = 0;
+        this.questions = this.playersQuestions.concat(this.questions);
     }
 
     resetVotes(){
@@ -119,6 +122,10 @@ export class Game{
         this.currentAnswers = new Map<string, string>();
         this.currentVotes = new Map<string, number>();
         this.mostVotedPerRound = [];
+    }
+
+    addQuestion(question: string){
+        this.playersQuestions.push(question);
     }
 }
 

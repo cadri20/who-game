@@ -128,5 +128,9 @@ export class GameService{
         return !this.rooms.get(roomId).players.includes(nick);
     }
 
+    addQuestion(roomId: string, question: string){
+        this.rooms.get(roomId).addQuestion(question);
+    }
+
 
 }

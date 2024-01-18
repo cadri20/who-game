@@ -132,6 +132,14 @@ export class GameGateway implements OnModuleInit{
         
     }
 
+    @SubscribeMessage('addQuestion')
+    addQuestion(client: Socket, data: any){
+        const roomCode = getRoom(client);
+        const question = data.question;
+        this.gameService.addQuestion(roomCode, question);
+        client.emit('addQuestion');
+    }
+
     @SubscribeMessage('playAgain')
     playAgain(client: Socket, data: any) {
         const roomCode = getRoom(client);
